@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#090d16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="متابعة الخطوط">
+<title>نظام متابعة الاعطال والتركيبات الاحترافي</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- XLSX Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+  :root {
+    --bg-base: #070a12;
+    --bg-card: rgba(17, 24, 39, 0.75);
+    --bg-card-solid: #111827;
+    --bg-glass: rgba(22, 32, 51, 0.65);
+    --bg-input: #1b2537;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-bright: rgba(255, 255, 255, 0.18);
+    --border-active: rgba(6, 182, 212, 0.5);
+    
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    
+    --cyan: #06b6d4;
+    --cyan-glow: rgba(6, 182, 212, 0.25);
+    --indigo: #6366f1;
+    --indigo-glow: rgba(99, 102, 241, 0.25);
+    --emerald: #10b981;
+    --emerald-glow: rgba(16, 185, 129, 0.2);
+    --amber: #f59e0b;
+    --amber-glow: rgba(245, 158, 11, 0.2);
+    --rose: #f43f5e;
+    --rose-glow: rgba(244, 63, 94, 0.2);
+    --purple: #a855f7;
+
+    --radius-xl: 20px;
+    --radius-lg: 14px;
+    --radius-md: 10px;
+    
+    --mono: 'JetBrains Mono', monospace;
+    --font: 'Cairo', sans-serif;
+
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  
+  html {
+    height: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-color: var(--bg-base);
+    background-image: 
+      radial-gradient(at 90% 0%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+      radial-gradient(at 10% 100%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(15, 23, 42, 0.5) 0px, transparent 100%);
+    background-attachment: fixed;
+    color: var(--text-main);
+    font-family: var(--font);
+    direction: rtl;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    /* Bottom space to clear floating tabbar and safe area */
+    padding-bottom: calc(120px + var(--safe-bottom));
+  }
+
+  ::selection { background: var(--cyan); color: #000; }
+  .num { font-family: var(--mono); direction: ltr; unicode-bidi: isolate; }
+
+  /* App Wrapper with top padding for safe top area */
+  .app-container {
+    max-width: 650px;
+    margin: 0 auto;
+    padding-top: calc(12px + var(--safe-top));
+  }
+
+  /* Header */
+  .header {
+    margin: 0 16px 14px;
+    padding: 12px 16px;
+    background: var(--bg-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-logo {
+    width: 44px; height: 44px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--cyan), var(--indigo));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 20px var(--cyan-glow);
+    flex-shrink: 0;
+  }
+  .brand-logo svg { width: 24px; height: 24px; stroke: #fff; }
+  .brand-title { font-weight: 900; font-size: 17px; letter-spacing: -0.3px; color: #fff; }
+  .brand-subtitle { font-size: 11px; color: var(--cyan); font-family: var(--mono); font-weight: 600; }
+
+  .clock-box { text-align: left; }
+  .clock-time { font-family: var(--mono); font-size: 20px; font-weight: 800; color: #fff; line-height: 1; }
+  .clock-shift { font-size: 11px; color: var(--text-muted); font-weight: 700; margin-top: 4px; }
+
+  /* Shift Signal Indicator Bar */
+  .signal-container { padding: 0 16px 16px; }
+  .signal-grid { display: flex; gap: 8px; height: 62px; }
+  .signal-card {
+    flex: 1;
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    transition: all 0.3s ease;
+  }
+  .signal-fill {
+    position: absolute; inset: auto 0 0 0; height: 0%;
+    background: linear-gradient(0deg, var(--cyan), rgba(6, 182, 212, 0.3));
+    transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .signal-card.done .signal-fill { background: rgba(255, 255, 255, 0.08); }
+  .signal-card.active {
+    border-color: var(--cyan);
+    box-shadow: 0 0 18px var(--cyan-glow);
+  }
+  .signal-content {
+    position: relative; z-index: 2; width: 100%; padding: 6px; text-align: center;
+  }
+  .signal-name { font-size: 11px; font-weight: 800; color: #fff; display: block; }
+  .signal-time { font-size: 9.5px; color: var(--text-muted); font-family: var(--mono); direction: ltr; display: block; margin-top: 1px; }
+  .signal-timer { font-size: 9px; color: var(--cyan); font-family: var(--mono); font-weight: 700; margin-top: 2px; }
+
+  /* Main View Container */
+  main { padding: 0 16px; }
+  .view { display: none; }
+  .view.active { display: block; animation: slideUpFade 0.35s ease forwards; }
+
+  @keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Section Titles */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 18px 0 10px;
+  }
+  .section-title { font-size: 15px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; }
+  .section-badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,0.1); color: var(--cyan); }
+
+  /* KPI Grid */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px 6px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--kpi-color, var(--cyan));
+  }
+  .kpi-val { font-family: var(--mono); font-size: 20px; font-weight: 800; color: #fff; display: block; }
+  .kpi-lbl { font-size: 10px; font-weight: 700; color: var(--text-muted); margin-top: 2px; display: block; }
+
+  /* Filter Toolbar Hub */
+  .filter-hub {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .search-row { display: flex; gap: 8px; }
+  .search-input-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .search-input-wrap svg {
+    position: absolute; right: 12px; width: 18px; height: 18px; stroke: var(--text-muted);
+  }
+  .search-input-wrap input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 10px 38px 10px 12px;
+    color: #fff;
+    font-size: 13px;
+    font-family: var(--font);
+    outline: none;
+    transition: border 0.2s;
+  }
+  .search-input-wrap input:focus { border-color: var(--cyan); }
+
+  .building-input-wrap {
+    width: 130px;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .building-input-wrap input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 10px 8px;
+    color: var(--amber);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    font-family: var(--font);
+    outline: none;
+  }
+  .building-input-wrap input::placeholder { color: var(--text-dim); font-weight: 500; }
+
+  .chips-scroll {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .chips-scroll::-webkit-scrollbar { display: none; }
+
+  .chip-btn {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .chip-btn.active {
+    background: var(--cyan);
+    color: #000;
+    border-color: var(--cyan);
+    box-shadow: 0 0 12px var(--cyan-glow);
+  }
+
+  /* Ticket Cards Layout */
+  .tickets-stack { display: flex; flex-direction: column; gap: 10px; }
+
+  .ticket-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+    cursor: pointer;
+  }
+  .ticket-card:active { transform: scale(0.98); }
+  .ticket-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 4px;
+    background: var(--status-color, var(--text-dim));
+  }
+
+  .ticket-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .ticket-line { font-family: var(--mono); font-size: 16px; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
+  .ticket-tags { display: flex; align-items: center; gap: 6px; }
+
+  .tag {
+    font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase;
+  }
+  .tag-fault { background: var(--rose-glow); color: var(--rose); border: 1px solid rgba(244, 63, 94, 0.3); }
+  .tag-install { background: var(--cyan-glow); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.3); }
+  .tag-building { background: rgba(245, 158, 11, 0.15); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+  .ticket-address {
+    font-size: 13px; color: var(--text-main); font-weight: 600; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ticket-address svg { width: 14px; height: 14px; stroke: var(--text-muted); flex-shrink: 0; }
+
+  .ticket-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 8px; border-top: 1px dashed var(--border);
+    font-size: 11px;
+  }
+  .ticket-customer { color: var(--text-muted); font-family: var(--mono); display: flex; align-items: center; gap: 4px; }
+  .ticket-status-badge {
+    font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 99px;
+    background: var(--status-bg, rgba(255,255,255,0.05));
+    color: var(--status-color, var(--text-muted));
+  }
+
+  /* Quick Action Buttons inside cards */
+  .quick-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .action-btn-sm {
+    flex: 1; padding: 6px; border-radius: var(--radius-md); border: 1px solid var(--border);
+    background: var(--bg-input); color: var(--text-main); font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; gap: 4px; text-decoration: none;
+  }
+
+  /* Status Colors Mapping */
+  .state-pending { --status-color: var(--cyan); --status-bg: var(--cyan-glow); }
+  .state-not-due { --status-color: var(--text-dim); --status-bg: rgba(255,255,255,0.06); }
+  .visually-hidden-input{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0; opacity:0;
+  }
+  .state-warning { --status-color: var(--amber); --status-bg: var(--amber-glow); }
+  .state-overdue { --status-color: var(--rose); --status-bg: var(--rose-glow); }
+  .state-success { --status-color: var(--emerald); --status-bg: var(--emerald-glow); }
+  .state-reason { --status-color: var(--purple); --status-bg: rgba(168, 85, 247, 0.2); }
+
+  /* Floating Bottom Navigation Bar */
+  .tabbar {
+    position: fixed;
+    bottom: calc(14px + var(--safe-bottom));
+    left: 16px; right: 16px;
+    max-width: 618px;
+    margin: 0 auto;
+    height: 64px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-bright);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 10px;
+    z-index: 50;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  .tab-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: none; border: none; color: var(--text-dim);
+    font-size: 10px; font-weight: 700; cursor: pointer; padding: 8px 12px;
+    transition: all 0.25s ease;
+    border-radius: 14px;
+  }
+  .tab-item svg { width: 22px; height: 22px; stroke-width: 2.2; }
+  .tab-item.active { color: var(--cyan); }
+
+  /* Floating Action Button (+ Add) */
+  .fab-btn {
+    position: fixed;
+    left: 28px;
+    bottom: calc(90px + var(--safe-bottom));
+    width: 58px; height: 58px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--cyan), var(--indigo));
+    border: none;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 28px var(--cyan-glow), 0 0 0 4px rgba(6, 182, 212, 0.2);
+    z-index: 51;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .fab-btn:active { transform: scale(0.9); }
+  .fab-btn svg { width: 28px; height: 28px; stroke-width: 2.8; }
+
+  /* Modal Bottom Sheet */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(3, 7, 18, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+
+  .modal-sheet {
+    background: var(--bg-card-solid);
+    border: 1px solid var(--border-bright);
+    border-bottom: none;
+    border-radius: 28px 28px 0 0;
+    width: 100%; max-width: 650px;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 12px 20px calc(30px + var(--safe-bottom));
+    animation: sheetUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes sheetUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .sheet-handle { width: 42px; height: 5px; background: var(--border-bright); border-radius: 99px; margin: 0 auto 16px; }
+  .sheet-title { font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 16px; text-align: center; }
+
+  /* Forms */
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px; }
+  .form-control {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    color: #fff;
+    font-size: 14px;
+    font-family: var(--font);
+    outline: none;
+  }
+  .form-control:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan-glow); }
+
+  .type-toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .toggle-btn {
+    padding: 12px; border-radius: var(--radius-lg); border: 1px solid var(--border);
+    background: var(--bg-input); color: var(--text-muted); font-weight: 800; font-size: 13px;
+    cursor: pointer; text-align: center;
+  }
+  .toggle-btn.active.fault { background: var(--rose-glow); color: var(--rose); border-color: var(--rose); }
+  .toggle-btn.active.install { background: var(--cyan-glow); color: var(--cyan); border-color: var(--cyan); }
+
+  .period-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .period-btn {
+    padding: 10px 4px; border-radius: var(--radius-lg); border: 1px solid var(--border);
+    background: var(--bg-input); color: var(--text-muted); font-size: 12px; font-weight: 800;
+    text-align: center; cursor: pointer;
+  }
+  .period-btn.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
+
+  .btn-submit {
+    width: 100%; padding: 14px; border-radius: var(--radius-lg); border: none;
+    background: linear-gradient(135deg, var(--cyan), var(--indigo));
+    color: #fff; font-weight: 900; font-size: 15px; cursor: pointer;
+    box-shadow: 0 8px 20px var(--cyan-glow); margin-top: 8px;
+  }
+  .btn-cancel {
+    width: 100%; padding: 12px; border-radius: var(--radius-lg); border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); font-weight: 700; font-size: 13px;
+    cursor: pointer; margin-top: 8px;
+  }
+
+  /* Empty state */
+  .empty-box {
+    text-align: center; padding: 48px 20px; color: var(--text-dim);
+  }
+  .empty-icon { font-size: 42px; margin-bottom: 10px; opacity: 0.6; }
+  .empty-text { font-size: 13px; font-weight: 700; }
+
+  /* Report bars */
+  .bar-item { margin-bottom: 12px; }
+  .bar-info { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .bar-track { height: 8px; background: var(--bg-input); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--cyan); border-radius: 99px; }
+
+  .countdown-ring-wrap { position: relative; width: 148px; height: 148px; margin: 4px auto 16px; }
+  .countdown-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-track { fill: none; stroke: var(--bg-input); stroke-width: 10; }
+  .ring-progress { fill: none; stroke: var(--cyan); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke .4s ease; }
+  .countdown-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .countdown-ring-time { font-family: var(--mono); font-size: 24px; font-weight: 900; direction: ltr; }
+  .countdown-ring-label { font-size: 11px; color: var(--text-dim); margin-top: 3px; font-weight: 700; }
+
+  .line-history-item { background: var(--bg-input); border-radius: 12px; padding: 10px 12px; margin-bottom: 7px; font-size: 12px; border: 1px solid var(--border); }
+  .line-history-item .lh-top { display: flex; justify-content: space-between; align-items: center; }
+  .line-history-item .lh-result { margin-top: 4px; font-weight: 700; }
+
+  /* SweetAlert custom styling for Arabic */
+  .swal2-popup {
+    background: #111827 !important;
+    color: #fff !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    font-family: var(--font) !important;
+  }
+  .swal2-title { color: #fff !important; font-size: 18px !important; font-weight: 800 !important; }
+  .swal2-html-container { color: #94a3b8 !important; font-size: 14px !important; }
+  .swal2-confirm { background: var(--cyan) !important; color: #000 !important; font-weight: 800 !important; border-radius: 12px !important; }
+  .swal2-cancel { background: var(--bg-input) !important; color: #fff !important; font-weight: 700 !important; border-radius: 12px !important; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- TOP HEADER -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 12a8 8 0 0 1 16 0M7 12a5 5 0 0 1 10 0M12 12v7m0 0-2.5-2.5M12 19l2.5-2.5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="brand-title">متابعة الخطوط Pro</div>
+        <div class="brand-subtitle" id="headerDate">--</div>
+      </div>
+    </div>
+    <div class="clock-box">
+      <div class="clock-time" id="clockTime">--:--</div>
+      <div class="clock-shift" id="clockShift">—</div>
+    </div>
+  </header>
+
+  <!-- SHIFT SIGNAL BAR -->
+  <div class="signal-container">
+    <div class="signal-grid" id="signalGrid"></div>
+  </div>
+
+  <main>
+    <!-- VIEW 1: DASHBOARD -->
+    <section id="view-dashboard" class="view active">
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--kpi-color: var(--cyan);">
+          <span class="kpi-val num" id="kpiTotal">0</span>
+          <span class="kpi-lbl">إجمالي اليوم</span>
+        </div>
+        <div class="kpi-card" style="--kpi-color: var(--emerald);">
+          <span class="kpi-val num" id="kpiClosed">0</span>
+          <span class="kpi-lbl">مغلقة</span>
+        </div>
+        <div class="kpi-card" style="--kpi-color: var(--amber);">
+          <span class="kpi-val num" id="kpiPending">0</span>
+          <span class="kpi-lbl">مفتوحة</span>
+        </div>
+        <div class="kpi-card" style="--kpi-color: var(--rose);">
+          <span class="kpi-val num" id="kpiOverdue">0</span>
+          <span class="kpi-lbl">متأخرة</span>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">
+          <span>🚨 محتاجة انتباه دلوقتي</span>
+          <span class="section-badge" id="urgentBadge">0</span>
+        </div>
+      </div>
+      <div id="urgentList" class="tickets-stack"></div>
+
+      <div class="section-header" style="margin-top:24px;">
+        <div class="section-title">📋 كل مهام اليوم</div>
+      </div>
+      <div id="todayList" class="tickets-stack"></div>
+    </section>
+
+    <!-- VIEW 2: ALL TICKETS & ADVANCED FILTER -->
+    <section id="view-tickets" class="view">
+      <div class="section-header">
+        <div class="section-title">🔍 البحث والفلترة المتقدمة</div>
+      </div>
+
+      <!-- FILTER HUB -->
+      <div class="filter-hub">
+        <div class="search-row">
+          <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/></svg>
+            <input type="text" id="filterSearch" placeholder="بحث برقم الخط، الهاتف، اسم العميل...">
+          </div>
+          <div class="building-input-wrap">
+            <input type="text" id="filterBuilding" placeholder="🏛️ عمارة / فيلا">
+          </div>
+        </div>
+
+        <div class="chips-scroll">
+          <input type="date" id="filterDate" class="form-control" style="width: auto; padding: 5px 10px; font-size: 11px;">
+          <button class="chip-btn active" data-period="all">كل الفترات</button>
+          <button class="chip-btn" data-period="1">الأولى (10 - 1)</button>
+          <button class="chip-btn" data-period="2">الثانية (1 - 4)</button>
+          <button class="chip-btn" data-period="3">الثالثة (4 - 7)</button>
+        </div>
+
+        <div class="chips-scroll">
+          <button class="chip-btn active" data-status="all">كل الحالات</button>
+          <button class="chip-btn" data-status="pending">مفتوحة</button>
+          <button class="chip-btn" data-status="closed">مغلقة</button>
+          <button class="chip-btn" data-status="overdue">متأخرة ⚠️</button>
+          <button class="chip-btn" data-type="fault">أعطال</button>
+          <button class="chip-btn" data-type="install">تركيبات</button>
+        </div>
+      </div>
+
+      <div id="filteredTicketsList" class="tickets-stack"></div>
+    </section>
+
+    <!-- VIEW 3: REPORTS -->
+    <section id="view-reports" class="view">
+      <div class="section-header">
+        <div class="section-title">📊 التقارير والإحصائيات</div>
+      </div>
+
+      <div class="filter-hub">
+        <div class="chips-scroll">
+          <button class="chip-btn active" data-rtype="period">تقرير فترة</button>
+          <button class="chip-btn" data-rtype="daily">يومي مجمّع</button>
+          <button class="chip-btn" data-rtype="range">أسبوعي/شهري</button>
+        </div>
+        <div class="search-row" id="reportPeriodControls">
+          <input type="date" id="repDate" class="form-control" style="flex:1;">
+          <select id="repPeriodSelect" class="form-control" style="flex:1;">
+            <option value="1">الفترة الأولى (10-1)</option>
+            <option value="2">الفترة الثانية (1-4)</option>
+            <option value="3">الفترة الثالثة (4-7)</option>
+          </select>
+        </div>
+        <div class="search-row" id="reportDailyControls" style="display:none;">
+          <input type="date" id="repDailyDate" class="form-control" style="flex:1;">
+        </div>
+        <div id="reportRangeControls" style="display:none;">
+          <div class="search-row">
+            <input type="date" id="repFromDate" class="form-control" style="flex:1;">
+            <input type="date" id="repToDate" class="form-control" style="flex:1;">
+          </div>
+          <div class="chips-scroll" style="margin-top:8px;">
+            <button class="chip-btn" id="btnRangeWeek">📅 آخر 7 أيام</button>
+            <button class="chip-btn" id="btnRangeMonth">📅 آخر 30 يوم</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--kpi-color: var(--cyan);"><span class="kpi-val num" id="rpTotal">0</span><span class="kpi-lbl">الإجمالي</span></div>
+        <div class="kpi-card" style="--kpi-color: var(--emerald);"><span class="kpi-val num" id="rpClosed">0</span><span class="kpi-lbl">تم الإغلاق</span></div>
+        <div class="kpi-card" style="--kpi-color: var(--amber);"><span class="kpi-val num" id="rpPending">0</span><span class="kpi-lbl">معلقة</span></div>
+        <div class="kpi-card" style="--kpi-color: var(--indigo);"><span class="kpi-val num" id="rpRate">0%</span><span class="kpi-lbl">نسبة الإنجاز</span></div>
+      </div>
+
+      <div class="section-header"><div class="section-title">تفاصيل الإنجاز والتوزيع</div></div>
+      <div id="reportDetailsBox" style="background: var(--bg-card); padding:16px; border-radius: var(--radius-xl); border:1px solid var(--border);"></div>
+
+      <button class="btn-submit" id="btnExportExcel" style="margin-top: 16px; background: linear-gradient(135deg, var(--emerald), #059669);">
+        📥 تصدير التقرير لملف Excel
+      </button>
+    </section>
+
+    <!-- VIEW 4: ARCHIVE -->
+    <section id="view-archive" class="view">
+      <div class="section-header">
+        <div class="section-title">🗄️ الأرشيف التاريخي</div>
+      </div>
+      <div class="filter-hub">
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/></svg>
+          <input type="text" id="archSearch" placeholder="بحث شامـل بأي كلمة أو رقم...">
+        </div>
+        <div class="search-row">
+          <button type="button" class="btn-submit" id="btnExportBackup" style="margin:0; flex:1; background:linear-gradient(135deg,var(--indigo),#4338ca); font-size:12px; padding:11px;">⬇️ نسخة احتياطية</button>
+          <input type="file" id="importBackupInput" accept="application/json" class="visually-hidden-input">
+          <label for="importBackupInput" class="btn-submit" style="margin:0; flex:1; background:linear-gradient(135deg,var(--emerald),#059669); font-size:12px; padding:11px; text-align:center; display:flex; align-items:center; justify-content:center; cursor:pointer;">⬆️ استيراد نسخة</label>
+        </div>
+      </div>
+      <div id="archiveList" class="tickets-stack"></div>
+    </section>
+  </main>
+
+  <!-- FLOATING BOTTOM TABBAR -->
+  <nav class="tabbar">
+    <button class="tab-item active" data-view="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 11.5 12 4l9 7.5M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+      <span>الرئيسية</span>
+    </button>
+    <button class="tab-item" data-view="tickets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 10h8M8 14h5"/></svg>
+      <span>المهام والفلترة</span>
+    </button>
+    <button class="tab-item" data-view="reports">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 20V10m6 10V4m6 16v-7"/></svg>
+      <span>التقارير</span>
+    </button>
+    <button class="tab-item" data-view="archive">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h18M5 7v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7M9 3h6a1 1 0 0 1 1 1v3H8V4a1 1 0 0 1 1-1Z"/></svg>
+      <span>الأرشيف</span>
+    </button>
+  </nav>
+
+  <!-- FAB (+) ADD BUTTON -->
+  <button class="fab-btn" id="fabAdd">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+  </button>
+
+</div>
+
+<!-- MODAL: ADD TICKET SHEET -->
+<div class="modal-overlay" id="modalAddOverlay">
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">➕ إضافة مهمة جديدة</div>
+
+    <button type="button" class="btn-cancel" id="btnSmartPasteModal" style="border-style:dashed; border-color:var(--cyan); color:var(--cyan); margin-bottom:14px;">
+      🤖 استيراد نص ذكي من (Claude / ChatGPT)
+    </button>
+
+    <div class="type-toggle-grid">
+      <button type="button" class="toggle-btn active fault" id="btnTypeFault">⚠️ عطل</button>
+      <button type="button" class="toggle-btn install" id="btnTypeInstall">🔧 تركيب</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">رقم الخط</label>
+      <input type="text" id="inputLine" class="form-control" inputmode="numeric" placeholder="مثال: 38167426">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">رقم العميل (الهاتف)</label>
+      <input type="text" id="inputCustomer" class="form-control" inputmode="numeric" placeholder="مثال: 01114347765">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">اسم العميل (اختياري)</label>
+      <input type="text" id="inputCustomerName" class="form-control" placeholder="مثال: المهندس أحمد">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">العنوان تفصيلياً (يتضمن العمارة / الفيلا)</label>
+      <input type="text" id="inputAddress" class="form-control" placeholder="مثال: عمارة 42 أو فيلا 15 - الحي الثاني">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">التاريخ</label>
+      <input type="date" id="inputDate" class="form-control">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">الفترة / الموعد</label>
+      <div class="period-picker-grid" id="addPeriodPicker">
+        <button type="button" class="period-btn active" data-period="1">الأولى<br><small>10 - 1</small></button>
+        <button type="button" class="period-btn" data-period="2">الثانية<br><small>1 - 4</small></button>
+        <button type="button" class="period-btn" data-period="3">الثالثة<br><small>4 - 7</small></button>
+      </div>
+    </div>
+
+    <button type="button" class="btn-submit" id="btnSaveTicket">حفظ المهمة</button>
+    <button type="button" class="btn-cancel" id="btnCancelAdd">إلغاء</button>
+  </div>
+</div>
+
+<!-- MODAL: TICKET DETAILS & CLOSING -->
+<div class="modal-overlay" id="modalDetailOverlay">
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="detailModalTitle">تفاصيل المهمة</div>
+
+    <div id="detailContentBox"></div>
+    <button type="button" class="btn-cancel" id="btnEditTicket" style="border-color:var(--indigo); color:var(--indigo); margin-top:10px;">✏️ تعديل البيانات</button>
+
+    <div id="pendingActionSection" style="margin-top:16px;">
+      <label class="form-label" style="text-align:center; font-size:13px; color:var(--cyan);">اختر نتيجة التنفيذ للإغلاق</label>
+      <div class="type-toggle-grid" id="resolutionBtnGrid" style="grid-template-columns:1fr 1fr; margin-top:8px;"></div>
+      <div class="form-group" id="otherNoteWrap" style="display:none; margin-top:10px;">
+        <input type="text" id="inputOtherNote" class="form-control" placeholder="اكتب السبب بالتفصيل هنا...">
+      </div>
+    </div>
+
+    <div id="closedActionSection" style="display:none; margin-top:16px;">
+      <button type="button" class="btn-cancel" id="btnReopenTicket" style="border-color:var(--amber); color:var(--amber);">↩️ إعادة فتح المهمة</button>
+    </div>
+
+    <button type="button" class="btn-cancel" id="btnDeleteTicket" style="border-color:var(--rose); color:var(--rose); margin-top:8px;">🗑️ حذف المهمة</button>
+    <button type="button" class="btn-cancel" id="btnCloseDetail">إغلاق النافذة</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   APP CONFIG & CONSTANTS
+========================================================= */
+const STORAGE_KEY = 'tt_pro_tickets_v2';
+
+const PERIODS = [
+  { id: 1, name: 'الفترة الأولى', short: 'الأولى', range: '10:00 - 1:00', start: '10:00', end: '13:00' },
+  { id: 2, name: 'الفترة الثانية', short: 'الثانية', range: '1:00 - 4:00', start: '13:00', end: '16:00' },
+  { id: 3, name: 'الفترة الثالثة', short: 'الثالثة', range: '4:00 - 7:00', start: '16:00', end: '19:00' }
+];
+
+const RESOLUTIONS = {
+  fault: { success: 'منتظم', reasons: ['تأجيل', 'مسار', 'شداد', 'رافض', 'أرضية', 'تحويل 682', 'لا يرد', 'أخرى'] },
+  install: { success: 'تم التركيب', reasons: ['تأجيل', 'مسار', 'لا يرد', 'شداد', 'رافض'] }
+};
+
+let tickets = [];
+
+let appState = {
+  view: 'dashboard',
+  filterSearch: '',
+  filterBuilding: '',
+  filterDate: todayStr(),
+  filterPeriod: 'all',
+  filterStatus: 'all',
+  filterType: 'all',
+  addType: 'fault',
+  addPeriod: 1,
+  reportType: 'period',
+  activeTicketId: null
+};
+
+/* =========================================================
+   HELPER UTILS
+========================================================= */
+function pad(n) { return n.toString().padStart(2, '0'); }
+
+function todayStr(d = new Date()) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function generateUid() {
+  return 'id_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+}
+
+function periodBounds(dateStr, periodObj) {
+  return {
+    start: new Date(`${dateStr}T${periodObj.start}:00`),
+    end: new Date(`${dateStr}T${periodObj.end}:00`)
+  };
+}
+
+function extractBuildingOrVilla(address) {
+  if (!address) return null;
+  // Match building/villa patterns like: عمارة 12, فيلا 405, bld 12, villa 5
+  const match = address.match(/(?:عمارة|عماره|فيلا|فيلة|bld|villa|شقة|مبنى)\s*#?\s*(\d+[\w-]*)/i);
+  if (match) return match[0];
+  // Fallback: look for stand-alone numbers in text
+  const standaloneNum = address.match(/\b\d{1,4}\b/);
+  return standaloneNum ? 'مبنى ' + standaloneNum[0] : null;
+}
+
+function getTicketState(t, now = new Date()) {
+  if (t.status === 'closed') {
+    const isSuccess = (t.resolution === RESOLUTIONS.fault.success || t.resolution === RESOLUTIONS.install.success);
+    return isSuccess ? 'success' : 'reason';
+  }
+  const period = PERIODS.find(p => p.id === t.periodId);
+  const { start, end } = periodBounds(t.date, period);
+  const warnTime = new Date(end.getTime() - 30 * 60000);
+
+  if (now < start) return 'not-due';
+  if (now >= end) return 'overdue';
+  if (now >= warnTime) return 'warning';
+  return 'pending';
+}
+
+function getStatusLabel(state) {
+  switch (state) {
+    case 'not-due': return 'لسه معاداش';
+    case 'pending': return 'قيد التنفيذ';
+    case 'warning': return 'اقتربت المهلة ⏳';
+    case 'overdue': return 'متأخرة! ⚠️';
+    case 'success': return 'تم بنجاح ✔️';
+    case 'reason': return 'تم الإغلاق (سبب)';
+    default: return 'مفتوحة';
+  }
+}
+
+/* =========================================================
+   LOCAL STORAGE & DATA CRUD
+========================================================= */
+function loadData() {
+  try {
+    tickets = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch (e) {
+    tickets = [];
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
+}
+
+function saveNewTicket(data) {
+  const period = PERIODS.find(p => p.id === Number(data.periodId));
+  const { start, end } = periodBounds(data.date, period);
+
+  const newObj = {
+    id: generateUid(),
+    type: data.type,
+    lineNumber: data.lineNumber.trim(),
+    customerNumber: (data.customerNumber || '').trim(),
+    customerName: (data.customerName || '').trim(),
+    address: data.address.trim(),
+    building: extractBuildingOrVilla(data.address.trim()),
+    date: data.date,
+    periodId: period.id,
+    periodStart: start.toISOString(),
+    periodEnd: end.toISOString(),
+    createdAt: new Date().toISOString(),
+    status: 'pending',
+    resolution: null,
+    note: '',
+    closedAt: null,
+    durationMin: null
+  };
+
+  tickets.push(newObj);
+  saveData();
+  return newObj;
+}
+
+function closeTicket(id, resolution, note = '') {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  t.status = 'closed';
+  t.resolution = resolution;
+  t.note = note;
+  t.closedAt = new Date().toISOString();
+
+  const start = new Date(t.periodStart);
+  const closed = new Date(t.closedAt);
+  t.durationMin = Math.max(0, Math.round((closed - start) / 60000));
+
+  saveData();
+}
+
+function reopenTicket(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  t.status = 'pending';
+  t.resolution = null;
+  t.note = '';
+  t.closedAt = null;
+  t.durationMin = null;
+  saveData();
+}
+
+function deleteTicket(id) {
+  tickets = tickets.filter(x => x.id !== id);
+  saveData();
+}
+
+/* =========================================================
+   HEADER & SIGNAL BAR RENDER
+========================================================= */
+function updateHeader() {
+  const now = new Date();
+  document.getElementById('clockTime').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById('headerDate').textContent = `${now.getDate()} / ${now.getMonth() + 1} / ${now.getFullYear()}`;
+
+  const currentDs = todayStr(now);
+  let activeShift = null;
+  for (const p of PERIODS) {
+    const { start, end } = periodBounds(currentDs, p);
+    if (now >= start && now < end) { activeShift = p; break; }
+  }
+  document.getElementById('clockShift').textContent = activeShift ? activeShift.name : 'خارج نوبة العمل';
+}
+
+function renderSignalGrid() {
+  const now = new Date();
+  const ds = todayStr(now);
+
+  const html = PERIODS.map(p => {
+    const { start, end } = periodBounds(ds, p);
+    let pct = 0, cls = '', timerStr = '';
+
+    if (now < start) { pct = 0; cls = ''; timerStr = 'لم تبدأ'; }
+    else if (now >= end) { pct = 100; cls = 'done'; timerStr = 'انتهت'; }
+    else {
+      pct = Math.min(100, Math.round(((now - start) / (end - start)) * 100));
+      cls = 'active';
+      const remMin = Math.max(0, Math.round((end - now) / 60000));
+      timerStr = `متبقي ${remMin} د`;
+    }
+
+    return `
+      <div class="signal-card ${cls}">
+        <div class="signal-fill" style="height:${pct}%"></div>
+        <div class="signal-content">
+          <span class="signal-name">${p.short}</span>
+          <span class="signal-time">${p.range}</span>
+          <span class="signal-timer">${timerStr}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('signalGrid').innerHTML = html;
+}
+
+/* =========================================================
+   TICKET CARD HTML GENERATOR
+========================================================= */
+function createTicketCardHtml(t) {
+  const state = getTicketState(t);
+  const buildingBadge = t.building ? `<span class="tag tag-building">🏛️ ${t.building}</span>` : '';
+  const typeTag = t.type === 'fault' ? `<span class="tag tag-fault">عطل</span>` : `<span class="tag tag-install">تركيب</span>`;
+
+  let subTimeStr = '';
+  if (t.status === 'pending') {
+    const period = PERIODS.find(p => p.id === t.periodId);
+    const { start, end } = periodBounds(t.date, period);
+    const now = new Date();
+    if (now < start) {
+      subTimeStr = `يبدأ الساعة ${pad(start.getHours())}:${pad(start.getMinutes())}`;
+    } else {
+      const diff = Math.round((end - now) / 60000);
+      subTimeStr = diff >= 0 ? `متبقي ${diff} دقيقة` : `متأخر بـ ${Math.abs(diff)} دقيقة`;
+    }
+  } else {
+    subTimeStr = `مدة التنفيذ: ${t.durationMin || 0} د`;
+  }
+
+  const phoneLink = t.customerNumber ? `href="tel:${t.customerNumber}"` : '';
+  const waLink = t.customerNumber ? `href="https://wa.me/2${t.customerNumber.replace(/\D/g,'')}" target="_blank"` : '';
+
+  return `
+    <div class="ticket-card state-${state}" onclick="openDetailModal('${t.id}')">
+      <div class="ticket-header">
+        <div class="ticket-line">${t.lineNumber}</div>
+        <div class="ticket-tags">
+          ${buildingBadge}
+          ${typeTag}
+        </div>
+      </div>
+      <div class="ticket-address">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-5.5-7-10a7 7 0 0 1 14 0c0 4.5-7 10-7 10z" stroke-width="2"/><circle cx="12" cy="11" r="2" stroke-width="2"/></svg>
+        <span>${t.address}</span>
+      </div>
+      <div class="ticket-footer">
+        <div class="ticket-customer">
+          👤 ${t.customerName || t.customerNumber || 'بدون اسم'}
+        </div>
+        <div class="ticket-status-badge">${getStatusLabel(state)} • ${subTimeStr}</div>
+      </div>
+      ${t.customerNumber ? `
+        <div class="quick-actions" onclick="event.stopPropagation()">
+          <a ${phoneLink} class="action-btn-sm">📞 اتصال</a>
+          <a ${waLink} class="action-btn-sm" style="color:var(--emerald);">💬 واتساب</a>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+/* =========================================================
+   VIEW RENDERERS
+========================================================= */
+function renderDashboardView() {
+  const ds = todayStr();
+  const todayTickets = tickets.filter(t => t.date === ds);
+
+  const closed = todayTickets.filter(t => t.status === 'closed');
+  const pending = todayTickets.filter(t => t.status === 'pending');
+  const overdue = pending.filter(t => getTicketState(t) === 'overdue');
+
+  document.getElementById('kpiTotal').textContent = todayTickets.length;
+  document.getElementById('kpiClosed').textContent = closed.length;
+  document.getElementById('kpiPending').textContent = pending.length;
+  document.getElementById('kpiOverdue').textContent = overdue.length;
+
+  const urgent = pending.filter(t => ['warning', 'overdue'].includes(getTicketState(t)));
+  document.getElementById('urgentBadge').textContent = urgent.length;
+
+  document.getElementById('urgentList').innerHTML = urgent.length
+    ? urgent.map(createTicketCardHtml).join('')
+    : `<div class="empty-box"><div class="empty-icon">✅</div><div class="empty-text">لا توجد مهام حارجة أو متأخرة حالياً</div></div>`;
+
+  document.getElementById('todayList').innerHTML = todayTickets.length
+    ? todayTickets.map(createTicketCardHtml).join('')
+    : `<div class="empty-box"><div class="empty-icon">📋</div><div class="empty-text">لم يتم تسجيل مهام لليوم بعد</div></div>`;
+}
+
+function renderFilteredTicketsView() {
+  let list = [...tickets];
+
+  // Search filter
+  if (appState.filterSearch) {
+    const q = appState.filterSearch.toLowerCase();
+    list = list.filter(t =>
+      t.lineNumber.toLowerCase().includes(q) ||
+      t.customerNumber.toLowerCase().includes(q) ||
+      t.customerName.toLowerCase().includes(q) ||
+      t.address.toLowerCase().includes(q)
+    );
+  }
+
+  // Building / Villa Filter
+  if (appState.filterBuilding) {
+    const bq = appState.filterBuilding.toLowerCase();
+    list = list.filter(t => (t.building && t.building.toLowerCase().includes(bq)) || t.address.toLowerCase().includes(bq));
+  }
+
+  // Date Filter
+  if (appState.filterDate) {
+    list = list.filter(t => t.date === appState.filterDate);
+  }
+
+  // Period Filter
+  if (appState.filterPeriod !== 'all') {
+    list = list.filter(t => t.periodId === Number(appState.filterPeriod));
+  }
+
+  // Status Filter
+  if (appState.filterStatus !== 'all') {
+    if (appState.filterStatus === 'pending') list = list.filter(t => t.status === 'pending');
+    else if (appState.filterStatus === 'closed') list = list.filter(t => t.status === 'closed');
+    else if (appState.filterStatus === 'overdue') list = list.filter(t => getTicketState(t) === 'overdue');
+  }
+
+  // Type Filter
+  if (appState.filterType !== 'all') {
+    list = list.filter(t => t.type === appState.filterType);
+  }
+
+  document.getElementById('filteredTicketsList').innerHTML = list.length
+    ? list.map(createTicketCardHtml).join('')
+    : `<div class="empty-box"><div class="empty-icon">🔎</div><div class="empty-text">لا توجد مهام تطابق خيارات الفلترة الحالية</div></div>`;
+}
+
+function renderReportsView() {
+  if (appState.reportType === 'daily') renderDailyReport();
+  else if (appState.reportType === 'range') renderRangeReport();
+  else renderPeriodReport();
+}
+
+function renderPeriodReport() {
+  const dateVal = document.getElementById('repDate').value || todayStr();
+  const periodVal = Number(document.getElementById('repPeriodSelect').value || 1);
+
+  const periodTickets = tickets.filter(t => t.date === dateVal && t.periodId === periodVal);
+  const closed = periodTickets.filter(t => t.status === 'closed');
+  const pending = periodTickets.filter(t => t.status === 'pending');
+
+  document.getElementById('rpTotal').textContent = periodTickets.length;
+  document.getElementById('rpClosed').textContent = closed.length;
+  document.getElementById('rpPending').textContent = pending.length;
+  const rate = periodTickets.length ? Math.round((closed.length / periodTickets.length) * 100) : 0;
+  document.getElementById('rpRate').textContent = rate + '%';
+
+  let html = `<div style="font-size:13px; font-weight:700; margin-bottom:8px;">حسب أسباب الإغلاق:</div>`;
+  const reasons = {};
+  closed.forEach(t => { if (t.resolution) reasons[t.resolution] = (reasons[t.resolution] || 0) + 1; });
+
+  if (Object.keys(reasons).length) {
+    for (const [r, cnt] of Object.entries(reasons)) {
+      const pct = Math.round((cnt / closed.length) * 100);
+      html += `
+        <div class="bar-item">
+          <div class="bar-info"><span>${r}</span><span>${cnt} (${pct}%)</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }
+  } else {
+    html += `<div style="color:var(--text-dim); font-size:12px;">لا توجد مهام مغلقة في هذه الفترة</div>`;
+  }
+
+  document.getElementById('reportDetailsBox').innerHTML = html;
+}
+
+function renderDailyReport() {
+  const dateVal = document.getElementById('repDailyDate').value || todayStr();
+  const dayTickets = tickets.filter(t => t.date === dateVal);
+  const closed = dayTickets.filter(t => t.status === 'closed');
+  const pending = dayTickets.filter(t => t.status === 'pending');
+
+  document.getElementById('rpTotal').textContent = dayTickets.length;
+  document.getElementById('rpClosed').textContent = closed.length;
+  document.getElementById('rpPending').textContent = pending.length;
+  document.getElementById('rpRate').textContent = (dayTickets.length ? Math.round(closed.length / dayTickets.length * 100) : 0) + '%';
+
+  let html = `<div style="font-size:13px; font-weight:700; margin-bottom:8px;">حسب الفترة:</div>`;
+  PERIODS.forEach(p => {
+    const items = dayTickets.filter(t => t.periodId === p.id);
+    const c = items.filter(t => t.status === 'closed').length;
+    const pct = items.length ? Math.round(c / items.length * 100) : 0;
+    html += `<div class="bar-item"><div class="bar-info"><span>${p.name}</span><span>${c}/${items.length}</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`;
+  });
+
+  html += `<div style="font-size:13px; font-weight:700; margin:14px 0 8px;">حسب النوع:</div>`;
+  ['fault', 'install'].forEach(ty => {
+    const items = dayTickets.filter(t => t.type === ty);
+    const c = items.filter(t => t.status === 'closed').length;
+    const pct = items.length ? Math.round(c / items.length * 100) : 0;
+    html += `<div class="bar-item"><div class="bar-info"><span>${ty === 'fault' ? 'أعطال' : 'تركيبات'}</span><span>${c}/${items.length}</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${ty === 'fault' ? 'var(--rose)' : 'var(--cyan)'}"></div></div></div>`;
+  });
+
+  html += `<div style="font-size:13px; font-weight:700; margin:14px 0 8px;">حسب سبب الإغلاق:</div>`;
+  const reasons = {};
+  closed.forEach(t => { if (t.resolution) reasons[t.resolution] = (reasons[t.resolution] || 0) + 1; });
+  if (Object.keys(reasons).length) {
+    Object.entries(reasons).sort((a, b) => b[1] - a[1]).forEach(([r, cnt]) => {
+      const pct = Math.round(cnt / closed.length * 100);
+      html += `<div class="bar-item"><div class="bar-info"><span>${r}</span><span>${cnt} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`;
+    });
+  } else {
+    html += `<div style="color:var(--text-dim); font-size:12px;">لا توجد مهام مغلقة النهاردة</div>`;
+  }
+
+  document.getElementById('reportDetailsBox').innerHTML = html;
+}
+
+function renderRangeReport() {
+  const from = document.getElementById('repFromDate').value;
+  const to = document.getElementById('repToDate').value;
+  if (!from || !to) {
+    document.getElementById('rpTotal').textContent = '0';
+    document.getElementById('rpClosed').textContent = '0';
+    document.getElementById('rpPending').textContent = '0';
+    document.getElementById('rpRate').textContent = '0%';
+    document.getElementById('reportDetailsBox').innerHTML = `<div style="color:var(--text-dim); font-size:12px;">اختار تاريخ البداية والنهاية، أو دوس على "آخر 7 أيام" / "آخر 30 يوم"</div>`;
+    return;
+  }
+  const rangeTickets = tickets.filter(t => t.date >= from && t.date <= to);
+  const closed = rangeTickets.filter(t => t.status === 'closed');
+  const pending = rangeTickets.filter(t => t.status === 'pending');
+
+  document.getElementById('rpTotal').textContent = rangeTickets.length;
+  document.getElementById('rpClosed').textContent = closed.length;
+  document.getElementById('rpPending').textContent = pending.length;
+  document.getElementById('rpRate').textContent = (rangeTickets.length ? Math.round(closed.length / rangeTickets.length * 100) : 0) + '%';
+
+  const byDay = {};
+  rangeTickets.forEach(t => {
+    byDay[t.date] = byDay[t.date] || { total: 0, closed: 0 };
+    byDay[t.date].total++;
+    if (t.status === 'closed') byDay[t.date].closed++;
+  });
+  const days = Object.keys(byDay).sort();
+  let html = `<div style="font-size:13px; font-weight:700; margin-bottom:8px;">حسب اليوم (${days.length} يوم فيهم شغل):</div>`;
+  if (days.length) {
+    days.forEach(d => {
+      const { total, closed: c } = byDay[d];
+      const pct = total ? Math.round(c / total * 100) : 0;
+      html += `<div class="bar-item"><div class="bar-info"><span class="num">${d}</span><span>${c}/${total}</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`;
+    });
+  } else {
+    html += `<div style="color:var(--text-dim); font-size:12px;">لا توجد مهام في المدى ده</div>`;
+  }
+
+  html += `<div style="font-size:13px; font-weight:700; margin:14px 0 8px;">حسب سبب الإغلاق:</div>`;
+  const reasons = {};
+  closed.forEach(t => { if (t.resolution) reasons[t.resolution] = (reasons[t.resolution] || 0) + 1; });
+  if (Object.keys(reasons).length) {
+    Object.entries(reasons).sort((a, b) => b[1] - a[1]).forEach(([r, cnt]) => {
+      const pct = Math.round(cnt / closed.length * 100);
+      html += `<div class="bar-item"><div class="bar-info"><span>${r}</span><span>${cnt} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></div>`;
+    });
+  } else {
+    html += `<div style="color:var(--text-dim); font-size:12px;">لا توجد مهام مغلقة في المدى ده</div>`;
+  }
+
+  document.getElementById('reportDetailsBox').innerHTML = html;
+}
+
+function renderArchiveView() {
+  const q = document.getElementById('archSearch').value.toLowerCase().trim();
+  let list = tickets.filter(t => t.status === 'closed');
+
+  if (q) {
+    list = list.filter(t =>
+      t.lineNumber.toLowerCase().includes(q) ||
+      t.customerNumber.toLowerCase().includes(q) ||
+      t.address.toLowerCase().includes(q)
+    );
+  }
+
+  document.getElementById('archiveList').innerHTML = list.length
+    ? list.map(createTicketCardHtml).join('')
+    : `<div class="empty-box"><div class="empty-icon">🗄️</div><div class="empty-text">الأرشيف فارغ حالياً</div></div>`;
+}
+
+function refreshActiveView() {
+  updateHeader();
+  renderSignalGrid();
+
+  if (appState.view === 'dashboard') renderDashboardView();
+  else if (appState.view === 'tickets') renderFilteredTicketsView();
+  else if (appState.view === 'reports') renderReportsView();
+  else if (appState.view === 'archive') renderArchiveView();
+}
+
+/* =========================================================
+   DETAIL & ACTION MODAL
+========================================================= */
+function getLineHistory(lineNumber, excludeId) {
+  return tickets
+    .filter(t => t.lineNumber === lineNumber && t.id !== excludeId)
+    .sort((a, b) => new Date(b.periodStart) - new Date(a.periodStart));
+}
+
+function renderLineHistoryHtml(lineNumber, excludeId) {
+  const history = getLineHistory(lineNumber, excludeId);
+  if (!history.length) {
+    return `<div style="margin-top:14px; font-size:11.5px; color:var(--text-dim);">📜 أول مرة يتسجل فيها الخط ده</div>`;
+  }
+  const items = history.map(h => {
+    const typeLabel = h.type === 'fault' ? '⚠️ عطل' : '🔧 تركيب';
+    const isSuccess = h.resolution === RESOLUTIONS.fault.success || h.resolution === RESOLUTIONS.install.success;
+    const resultLabel = h.status === 'closed' ? h.resolution : 'لسه مفتوحة';
+    const resultColor = h.status !== 'closed' ? 'var(--amber)' : (isSuccess ? 'var(--emerald)' : 'var(--rose)');
+    return `
+      <div class="line-history-item">
+        <div class="lh-top"><span class="num" style="color:var(--text-dim);">${h.date}</span><span style="font-weight:700;">${typeLabel}</span></div>
+        <div class="lh-result" style="color:${resultColor};">${resultLabel}</div>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div style="margin-top:14px;">
+      <div style="font-size:12.5px; font-weight:800; color:var(--amber); margin-bottom:8px;">📜 سجل الخط ده (${history.length} مرة سابقة)</div>
+      ${items}
+    </div>
+  `;
+}
+
+function renderCountdownRing(t) {
+  const wrap = document.getElementById('countdownRingWrap');
+  const circle = document.getElementById('ringProgress');
+  if (!wrap || !circle) return;
+  const period = PERIODS.find(p => p.id === t.periodId);
+  const { start, end } = periodBounds(t.date, period);
+  const now = new Date();
+  const r = 52, circumference = 2 * Math.PI * r;
+  circle.style.strokeDasharray = `${circumference}`;
+
+  let pct, timeText, labelText, color;
+  const fmt = (min) => min >= 60 ? `${Math.floor(min / 60)}:${pad(min % 60)}` : `${min} د`;
+
+  if (now < start) {
+    pct = 0;
+    timeText = fmt(Math.max(0, Math.round((start - now) / 60000)));
+    labelText = 'لحد ما تبدأ الفترة';
+    color = 'var(--text-dim)';
+  } else if (now >= end) {
+    pct = 100;
+    timeText = fmt(Math.round((now - end) / 60000));
+    labelText = 'متأخر ⚠️';
+    color = 'var(--rose)';
+  } else {
+    pct = Math.min(100, Math.round(((now - start) / (end - start)) * 100));
+    timeText = fmt(Math.max(0, Math.round((end - now) / 60000)));
+    const warnTime = new Date(end.getTime() - 30 * 60000);
+    labelText = now >= warnTime ? 'قرّب الوقت ⏳' : 'متبقي';
+    color = now >= warnTime ? 'var(--amber)' : 'var(--cyan)';
+  }
+  circle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+  circle.style.stroke = color;
+  document.getElementById('ringTimeText').textContent = timeText;
+  document.getElementById('ringTimeText').style.color = color;
+  document.getElementById('ringLabelText').textContent = labelText;
+}
+
+function populateDetailReadonly(t) {
+  document.getElementById('detailModalTitle').textContent = t.type === 'fault' ? '⚠️ تفاصيل العطل' : '🔧 تفاصيل التركيب';
+
+  const period = PERIODS.find(p => p.id === t.periodId);
+  const buildingStr = t.building ? `<br><span style="color:var(--amber);">🏛️ ${t.building}</span>` : '';
+
+  document.getElementById('detailContentBox').innerHTML = `
+    ${t.status === 'pending' ? `
+      <div class="countdown-ring-wrap" id="countdownRingWrap">
+        <svg viewBox="0 0 120 120" class="countdown-ring">
+          <circle cx="60" cy="60" r="52" class="ring-track"></circle>
+          <circle cx="60" cy="60" r="52" class="ring-progress" id="ringProgress"></circle>
+        </svg>
+        <div class="countdown-ring-center">
+          <div class="countdown-ring-time" id="ringTimeText">--:--</div>
+          <div class="countdown-ring-label" id="ringLabelText">متبقي</div>
+        </div>
+      </div>
+    ` : ''}
+    <div style="background:var(--bg-input); padding:14px; border-radius:16px; font-size:13px; line-height:1.7;">
+      <div><strong>رقم الخط:</strong> <span class="num" style="color:var(--cyan); font-weight:800;">${t.lineNumber}</span></div>
+      <div><strong>اسم العميل:</strong> ${t.customerName || 'غير محدد'}</div>
+      <div><strong>رقم الهاتف:</strong> <span class="num">${t.customerNumber || 'غير محدد'}</span></div>
+      <div><strong>العنوان:</strong> ${t.address} ${buildingStr}</div>
+      <div><strong>الموعد:</strong> ${period.name} (${period.range}) - ${t.date}</div>
+      ${t.status === 'closed' ? `<div style="color:var(--emerald);"><strong>النتيجة:</strong> ${t.resolution}</div>` : ''}
+    </div>
+    ${renderLineHistoryHtml(t.lineNumber, t.id)}
+  `;
+
+  if (t.status === 'pending') renderCountdownRing(t);
+
+  const pendingSec = document.getElementById('pendingActionSection');
+  const closedSec = document.getElementById('closedActionSection');
+
+  if (t.status === 'pending') {
+    pendingSec.style.display = 'block';
+    closedSec.style.display = 'none';
+
+    const set = RESOLUTIONS[t.type];
+    let btnHtml = `<button type="button" class="toggle-btn active install" style="grid-column:1/-1;" onclick="handleCloseClick('${set.success}')">✔️ ${set.success}</button>`;
+    btnHtml += set.reasons.map(r => `<button type="button" class="toggle-btn" onclick="handleCloseClick('${r}')">${r}</button>`).join('');
+    document.getElementById('resolutionBtnGrid').innerHTML = btnHtml;
+  } else {
+    pendingSec.style.display = 'none';
+    closedSec.style.display = 'block';
+  }
+}
+
+function renderDetailEditForm(t) {
+  document.getElementById('detailModalTitle').textContent = '✏️ تعديل بيانات المهمة';
+  document.getElementById('pendingActionSection').style.display = 'none';
+  document.getElementById('closedActionSection').style.display = 'none';
+
+  document.getElementById('detailContentBox').innerHTML = `
+    <div class="form-group"><label class="form-label">رقم الخط</label><input type="text" id="editLine" class="form-control" inputmode="numeric" value="${t.lineNumber}"></div>
+    <div class="form-group"><label class="form-label">رقم العميل</label><input type="text" id="editCustomer" class="form-control" inputmode="numeric" value="${t.customerNumber || ''}"></div>
+    <div class="form-group"><label class="form-label">اسم العميل</label><input type="text" id="editCustomerName" class="form-control" value="${t.customerName || ''}"></div>
+    <div class="form-group"><label class="form-label">العنوان</label><input type="text" id="editAddress" class="form-control" value="${t.address}"></div>
+    <div class="form-group"><label class="form-label">التاريخ</label><input type="date" id="editDate" class="form-control" value="${t.date}"></div>
+    <div class="form-group">
+      <label class="form-label">الفترة</label>
+      <div class="period-picker-grid" id="editPeriodPicker">
+        ${PERIODS.map(p => `<button type="button" class="period-btn ${p.id === t.periodId ? 'active' : ''}" data-period="${p.id}">${p.short}<br><small>${p.range}</small></button>`).join('')}
+      </div>
+    </div>
+    <button type="button" class="btn-submit" id="btnSaveEdit">💾 حفظ التعديلات</button>
+    <button type="button" class="btn-cancel" id="btnCancelEdit">إلغاء</button>
+  `;
+
+  let editPeriod = t.periodId;
+  document.querySelectorAll('#editPeriodPicker .period-btn').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('#editPeriodPicker .period-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      editPeriod = Number(b.dataset.period);
+    };
+  });
+
+  document.getElementById('btnCancelEdit').onclick = () => {
+    populateDetailReadonly(t);
+    document.getElementById('btnEditTicket').style.display = 'block';
+  };
+
+  document.getElementById('btnSaveEdit').onclick = () => {
+    const line = document.getElementById('editLine').value.trim();
+    const address = document.getElementById('editAddress').value.trim();
+    if (!line || !address) { Swal.fire('خطأ', 'رقم الخط والعنوان مطلوبين', 'error'); return; }
+    updateTicketFields(t.id, {
+      lineNumber: line,
+      customerNumber: document.getElementById('editCustomer').value.trim(),
+      customerName: document.getElementById('editCustomerName').value.trim(),
+      address,
+      date: document.getElementById('editDate').value || t.date,
+      periodId: editPeriod
+    });
+    Swal.fire({ icon: 'success', title: 'اتحفظت التعديلات', timer: 1200, showConfirmButton: false });
+    const updated = tickets.find(x => x.id === t.id);
+    populateDetailReadonly(updated);
+    document.getElementById('btnEditTicket').style.display = 'block';
+    refreshActiveView();
+  };
+}
+
+function updateTicketFields(id, fields) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  Object.assign(t, fields);
+  t.building = extractBuildingOrVilla(t.address);
+  const period = PERIODS.find(p => p.id === Number(t.periodId));
+  const { start, end } = periodBounds(t.date, period);
+  t.periodId = period.id;
+  t.periodStart = start.toISOString();
+  t.periodEnd = end.toISOString();
+  saveData();
+}
+
+function openDetailModal(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  appState.activeTicketId = id;
+  document.getElementById('btnEditTicket').style.display = 'block';
+  populateDetailReadonly(t);
+  document.getElementById('modalDetailOverlay').classList.add('active');
+}
+
+function handleCloseClick(res) {
+  if (res === 'أخرى') {
+    document.getElementById('otherNoteWrap').style.display = 'block';
+    const noteVal = document.getElementById('inputOtherNote').value.trim();
+    if (!noteVal) {
+      Swal.fire('تنبيه', 'يرجى كتابة التوضيح والسبب أولاً', 'warning');
+      return;
+    }
+    closeTicket(appState.activeTicketId, 'أخرى', noteVal);
+  } else {
+    closeTicket(appState.activeTicketId, res);
+  }
+
+  Swal.fire({ icon: 'success', title: 'تم إغلاق المهمة بنجاح', timer: 1500, showConfirmButton: false });
+  document.getElementById('modalDetailOverlay').classList.remove('active');
+  refreshActiveView();
+}
+
+/* =========================================================
+   EVENT LISTENERS & BINDINGS
+========================================================= */
+document.querySelectorAll('.tab-item').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+    btn.classList.add('active');
+    appState.view = btn.dataset.view;
+    document.getElementById(`view-${appState.view}`).classList.add('active');
+    refreshActiveView();
+  };
+});
+
+// Modal Toggles
+document.getElementById('fabAdd').onclick = () => {
+  document.getElementById('inputDate').value = todayStr();
+  document.getElementById('modalAddOverlay').classList.add('active');
+};
+document.getElementById('btnCancelAdd').onclick = () => document.getElementById('modalAddOverlay').classList.remove('active');
+document.getElementById('btnCloseDetail').onclick = () => document.getElementById('modalDetailOverlay').classList.remove('active');
+
+// Add Type Buttons
+document.getElementById('btnTypeFault').onclick = () => {
+  appState.addType = 'fault';
+  document.getElementById('btnTypeFault').classList.add('active');
+  document.getElementById('btnTypeInstall').classList.remove('active');
+};
+document.getElementById('btnTypeInstall').onclick = () => {
+  appState.addType = 'install';
+  document.getElementById('btnTypeInstall').classList.add('active');
+  document.getElementById('btnTypeFault').classList.remove('active');
+};
+
+// Period Picker Buttons
+document.querySelectorAll('#addPeriodPicker .period-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('#addPeriodPicker .period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    appState.addPeriod = Number(btn.dataset.period);
+  };
+});
+
+// Save Ticket
+document.getElementById('btnSaveTicket').onclick = () => {
+  const line = document.getElementById('inputLine').value.trim();
+  const address = document.getElementById('inputAddress').value.trim();
+
+  if (!line || !address) {
+    Swal.fire('خطأ', 'يرجى إدخال رقم الخط والعنوان على الأقل', 'error');
+    return;
+  }
+
+  saveNewTicket({
+    type: appState.addType,
+    lineNumber: line,
+    customerNumber: document.getElementById('inputCustomer').value,
+    customerName: document.getElementById('inputCustomerName').value,
+    address: address,
+    date: document.getElementById('inputDate').value || todayStr(),
+    periodId: appState.addPeriod
+  });
+
+  Swal.fire({ icon: 'success', title: 'تمت الإضافة بنجاح', timer: 1400, showConfirmButton: false });
+  document.getElementById('modalAddOverlay').classList.remove('active');
+  
+  // Clear inputs
+  document.getElementById('inputLine').value = '';
+  document.getElementById('inputCustomer').value = '';
+  document.getElementById('inputCustomerName').value = '';
+  document.getElementById('inputAddress').value = '';
+
+  refreshActiveView();
+};
+
+// Reopen / Delete
+document.getElementById('btnReopenTicket').onclick = () => {
+  reopenTicket(appState.activeTicketId);
+  Swal.fire({ icon: 'info', title: 'تمت إعادة فتح المهمة', timer: 1400, showConfirmButton: false });
+  document.getElementById('modalDetailOverlay').classList.remove('active');
+  refreshActiveView();
+};
+
+document.getElementById('btnDeleteTicket').onclick = () => {
+  Swal.fire({
+    title: 'تأكيد الحذف',
+    text: 'هل أنت متأكد من حذف هذه المهمة نهائياً؟',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'نعم، احذف',
+    cancelButtonText: 'إلغاء'
+  }).then(res => {
+    if (res.isConfirmed) {
+      deleteTicket(appState.activeTicketId);
+      document.getElementById('modalDetailOverlay').classList.remove('active');
+      refreshActiveView();
+    }
+  });
+};
+
+// Real-time Filters Binding
+document.getElementById('filterSearch').oninput = (e) => { appState.filterSearch = e.target.value; renderFilteredTicketsView(); };
+document.getElementById('filterBuilding').oninput = (e) => { appState.filterBuilding = e.target.value; renderFilteredTicketsView(); };
+document.getElementById('filterDate').onchange = (e) => { appState.filterDate = e.target.value; renderFilteredTicketsView(); };
+
+document.querySelectorAll('.chips-scroll [data-period]').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.chips-scroll [data-period]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    appState.filterPeriod = btn.dataset.period;
+    renderFilteredTicketsView();
+  };
+});
+
+document.querySelectorAll('.chips-scroll [data-status]').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.chips-scroll [data-status]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    appState.filterStatus = btn.dataset.status;
+    renderFilteredTicketsView();
+  };
+});
+
+document.querySelectorAll('.chips-scroll [data-type]').forEach(btn => {
+  btn.onclick = () => {
+    const isAct = btn.classList.contains('active');
+    document.querySelectorAll('.chips-scroll [data-type]').forEach(b => b.classList.remove('active'));
+    if (!isAct) btn.classList.add('active');
+    appState.filterType = !isAct ? btn.dataset.type : 'all';
+    renderFilteredTicketsView();
+  };
+});
+
+// Smart Paste Modal Integration
+document.getElementById('btnSmartPasteModal').onclick = async () => {
+  const { value: text } = await Swal.fire({
+    title: 'الصق النص المستخرج من Claude/ChatGPT',
+    input: 'textarea',
+    inputPlaceholder: 'صيغة كل سطر: نوع|خط|هاتف|اسم|عنوان|تاريخ|فترة',
+    showCancelButton: true,
+    confirmButtonText: 'معالجة النص'
+  });
+
+  if (text) {
+    const lines = text.split('\n').filter(l => l.includes('|'));
+    let addedCount = 0;
+    lines.forEach(l => {
+      const parts = l.split('|').map(p => p.trim());
+      if (parts.length >= 5) {
+        saveNewTicket({
+          type: parts[0].includes('ترك') ? 'install' : 'fault',
+          lineNumber: parts[1],
+          customerNumber: parts[2] || '',
+          customerName: parts[3] || '',
+          address: parts[4],
+          date: parts[5] || todayStr(),
+          periodId: Number(parts[6]) || 1
+        });
+        addedCount++;
+      }
+    });
+    Swal.fire('تم بنجاح', `تمت إضافة ${addedCount} مهمة جديدة`, 'success');
+    document.getElementById('modalAddOverlay').classList.remove('active');
+    refreshActiveView();
+  }
+};
+
+// Export Excel
+document.getElementById('btnExportExcel').onclick = () => {
+  if (!tickets.length) { Swal.fire('تنبيه', 'لا توجد بيانات للتصدير', 'info'); return; }
+  const rows = tickets.map(t => ({
+    'رقم الخط': t.lineNumber,
+    'النوع': t.type === 'fault' ? 'عطل' : 'تركيب',
+    'اسم العميل': t.customerName,
+    'الهاتف': t.customerNumber,
+    'العنوان': t.address,
+    'العمارة/الفيلا': t.building || '-',
+    'التاريخ': t.date,
+    'الحالة': t.status,
+    'النتيجة': t.resolution || '-'
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'المهام');
+  XLSX.writeFile(wb, `تقرير_الخطوط_${todayStr()}.xlsx`);
+};
+
+// Report Type Toggle
+document.querySelectorAll('.filter-hub [data-rtype]').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.filter-hub [data-rtype]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    appState.reportType = btn.dataset.rtype;
+    document.getElementById('reportPeriodControls').style.display = appState.reportType === 'period' ? 'flex' : 'none';
+    document.getElementById('reportDailyControls').style.display = appState.reportType === 'daily' ? 'flex' : 'none';
+    document.getElementById('reportRangeControls').style.display = appState.reportType === 'range' ? 'block' : 'none';
+    renderReportsView();
+  };
+});
+document.getElementById('btnRangeWeek').onclick = () => {
+  const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 6);
+  document.getElementById('repFromDate').value = todayStr(from);
+  document.getElementById('repToDate').value = todayStr(to);
+  renderRangeReport();
+};
+document.getElementById('btnRangeMonth').onclick = () => {
+  const to = new Date(); const from = new Date(); from.setDate(from.getDate() - 29);
+  document.getElementById('repFromDate').value = todayStr(from);
+  document.getElementById('repToDate').value = todayStr(to);
+  renderRangeReport();
+};
+
+// Edit Ticket
+document.getElementById('btnEditTicket').onclick = () => {
+  const t = tickets.find(x => x.id === appState.activeTicketId);
+  if (!t) return;
+  document.getElementById('btnEditTicket').style.display = 'none';
+  renderDetailEditForm(t);
+};
+
+// Backup Export / Import
+function exportBackup() {
+  if (!tickets.length) { Swal.fire('تنبيه', 'مفيش بيانات تتصدّر', 'info'); return; }
+  const blob = new Blob([JSON.stringify(tickets, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `نسخة_احتياطية_${todayStr()}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  Swal.fire({ icon: 'success', title: `اتصدّرت نسخة احتياطية (${tickets.length} مهمة)`, timer: 1600, showConfirmButton: false });
+}
+document.getElementById('btnExportBackup').onclick = exportBackup;
+document.getElementById('importBackupInput').addEventListener('change', (e) => {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (!Array.isArray(imported)) throw new Error('bad format');
+      const existingIds = new Set(tickets.map(t => t.id));
+      let added = 0;
+      imported.forEach(t => {
+        if (t && t.id && !existingIds.has(t.id)) { tickets.push(t); existingIds.add(t.id); added++; }
+      });
+      saveData();
+      Swal.fire('تم الاستيراد', `اترجعت ${added} مهمة جديدة (اللي موجودة اتجاهلت عشان منكررش)`, 'success');
+      refreshActiveView();
+    } catch (err) {
+      Swal.fire('خطأ', 'الملف ده مش نسخة احتياطية صحيحة', 'error');
+    }
+  };
+  reader.readAsText(file);
+});
+
+/* =========================================================
+   INIT APP
+========================================================= */
+function init() {
+  loadData();
+  document.getElementById('filterDate').value = todayStr();
+  document.getElementById('repDate').value = todayStr();
+  document.getElementById('repDailyDate').value = todayStr();
+  refreshActiveView();
+
+  // Live Timer Refresher
+  setInterval(() => {
+    updateHeader();
+    renderSignalGrid();
+    if (document.getElementById('modalDetailOverlay').classList.contains('active') && appState.activeTicketId) {
+      const t = tickets.find(x => x.id === appState.activeTicketId);
+      if (t && t.status === 'pending') renderCountdownRing(t);
+    }
+  }, 10000);
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+init();
+</script>
+</body>
+</html>
